@@ -78,21 +78,21 @@ const airtable = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'fetch', table, options })
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || `API error: ${response.status}`);
     }
     return response.json();
   },
-  
+
   async create(table, fields) {
     const response = await fetch('/api/airtable', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'create', table, options: { fields } })
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || `API error: ${response.status}`);
@@ -116,13 +116,13 @@ const generateSessionId = () => {
 export default function BrandStyleQuiz() {
   const router = useRouter();
   const { client: clientSlug } = router.query;
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [client, setClient] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [templates, setTemplates] = useState([]);
-  
+
   const [screen, setScreen] = useState('intro');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [scores, setScores] = useState({});
@@ -148,11 +148,11 @@ export default function BrandStyleQuiz() {
       const clientRes = await airtable.fetch('Clients', {
         filterByFormula: `AND({${f.clients.slug}} = '${clientSlug}', {${f.clients.active}} = TRUE())`
       });
-      
+
       if (!clientRes.records || !clientRes.records.length) {
         throw new Error(`Quiz not found for "${clientSlug}". Make sure the client exists and is marked as Active in Airtable.`);
       }
-      
+
       const clientRecord = clientRes.records[0];
       const loadedClient = {
         id: clientRecord.id,
@@ -165,15 +165,22 @@ export default function BrandStyleQuiz() {
       setClient(loadedClient);
 
       // Fetch questions
+      // Fetch questions
+      // Note: Linked records in formulas evaluate to their primary field value (usually Name), not ID.
+      // We search for the client name in the linked Client field of the Questions table.
+      const safeClientName = (clientRecord.fields[f.clients.name] || '').replace(/'/g, "\\'");
+
+      console.log('Fetching questions for client:', safeClientName);
+
       const questionsRes = await airtable.fetch('Questions', {
-        filterByFormula: `AND(FIND('${clientRecord.id}', ARRAYJOIN({${f.questions.client}})), {${f.questions.active}} = TRUE())`,
+        filterByFormula: `AND(FIND('${safeClientName}', ARRAYJOIN({${f.questions.client}})), {${f.questions.active}} = TRUE())`,
         sort: [{ field: f.questions.order, direction: 'asc' }]
       });
-      
+
       if (!questionsRes.records || !questionsRes.records.length) {
         throw new Error('No questions found for this client. Add questions in Airtable and mark them as Active.');
       }
-      
+
       const loadedQuestions = questionsRes.records.map(r => ({
         id: r.id,
         order: r.fields[f.questions.order],
@@ -189,15 +196,16 @@ export default function BrandStyleQuiz() {
           traits: JSON.parse(r.fields[f.questions.optionBTraits] || '{}')
         }
       }));
-      
+
       setQuestions(loadedQuestions);
 
       // Fetch templates
+      // Fetch templates
       const templatesRes = await airtable.fetch('Templates', {
-        filterByFormula: `FIND('${clientRecord.id}', ARRAYJOIN({${f.templates.client}}))`,
+        filterByFormula: `FIND('${safeClientName}', ARRAYJOIN({${f.templates.client}}))`,
         sort: [{ field: f.templates.order, direction: 'asc' }]
       });
-      
+
       const loadedTemplates = (templatesRes.records || []).map(r => ({
         id: r.id,
         name: r.fields[f.templates.name],
@@ -206,10 +214,10 @@ export default function BrandStyleQuiz() {
         framerUrl: r.fields[f.templates.framerUrl],
         matchProfile: JSON.parse(r.fields[f.templates.matchProfile] || '{}')
       }));
-      
+
       setTemplates(loadedTemplates);
       setLoading(false);
-      
+
     } catch (err) {
       console.error('Error loading quiz:', err);
       setError(err.message);
@@ -219,7 +227,7 @@ export default function BrandStyleQuiz() {
 
   const handleChoice = (option) => {
     if (isAnimating) return;
-    
+
     const question = questions[currentQuestion];
     setSelectedOption(option);
     setIsAnimating(true);
@@ -268,11 +276,11 @@ export default function BrandStyleQuiz() {
 
   const matchTemplates = () => {
     const profile = calculateResults();
-    
+
     return templates.map(template => {
       let matchScore = 0;
       let totalChecks = 0;
-      
+
       Object.entries(template.matchProfile).forEach(([trait, expectedLevel]) => {
         totalChecks++;
         const actualLevel = profile[trait] || 'low';
@@ -284,7 +292,7 @@ export default function BrandStyleQuiz() {
           (actualLevel === 'low' && expectedLevel === 'medium')
         ) matchScore += 1;
       });
-      
+
       return {
         ...template,
         matchPercent: totalChecks > 0 ? Math.round((matchScore / (totalChecks * 2)) * 100) : 50
@@ -294,11 +302,11 @@ export default function BrandStyleQuiz() {
 
   const submitResults = async () => {
     setSubmitting(true);
-    
+
     const topTraits = getTopTraits();
     const rankedTemplates = matchTemplates();
     const f = FIELD_NAMES.results;
-    
+
     const resultData = {
       [f.sessionId]: sessionId,
       [f.submittedAt]: new Date().toISOString(),
@@ -309,7 +317,7 @@ export default function BrandStyleQuiz() {
       [f.respondentName]: contactInfo.name,
       [f.respondentEmail]: contactInfo.email
     };
-    
+
     if (client?.id) {
       try {
         resultData[f.client] = [client.id];
@@ -318,7 +326,7 @@ export default function BrandStyleQuiz() {
         console.error('Error saving results:', err);
       }
     }
-    
+
     setSubmitting(false);
     setScreen('results');
   };
@@ -364,7 +372,7 @@ export default function BrandStyleQuiz() {
             </div>
             <h1 className="text-xl font-medium mb-2">Something went wrong</h1>
             <p className="text-neutral-400 mb-6">{error}</p>
-            <a 
+            <a
               href="/"
               className="inline-block px-6 py-3 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors"
             >
@@ -423,7 +431,7 @@ export default function BrandStyleQuiz() {
         </Head>
         <div className="min-h-screen bg-neutral-950 text-white flex flex-col">
           <div className="h-1 bg-neutral-800">
-            <div 
+            <div
               className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
               style={{ width: `${progress}%` }}
             />
@@ -440,15 +448,14 @@ export default function BrandStyleQuiz() {
             <button
               onClick={() => handleChoice('A')}
               disabled={isAnimating}
-              className={`group relative flex-1 max-w-md aspect-[4/3] rounded-2xl overflow-hidden transition-all duration-300 bg-neutral-800 ${
-                selectedOption === 'A' ? 'scale-105 ring-4 ring-purple-500' : 
-                selectedOption === 'B' ? 'scale-95 opacity-40' : 
-                'hover:scale-102 hover:ring-2 hover:ring-white/20'
-              }`}
+              className={`group relative flex-1 max-w-md aspect-[4/3] rounded-2xl overflow-hidden transition-all duration-300 bg-neutral-800 ${selectedOption === 'A' ? 'scale-105 ring-4 ring-purple-500' :
+                selectedOption === 'B' ? 'scale-95 opacity-40' :
+                  'hover:scale-102 hover:ring-2 hover:ring-white/20'
+                }`}
             >
               {question.optionA.image ? (
-                <img 
-                  src={question.optionA.image} 
+                <img
+                  src={question.optionA.image}
                   alt={question.optionA.label}
                   className="w-full h-full object-cover"
                 />
@@ -470,15 +477,14 @@ export default function BrandStyleQuiz() {
             <button
               onClick={() => handleChoice('B')}
               disabled={isAnimating}
-              className={`group relative flex-1 max-w-md aspect-[4/3] rounded-2xl overflow-hidden transition-all duration-300 bg-neutral-800 ${
-                selectedOption === 'B' ? 'scale-105 ring-4 ring-purple-500' : 
-                selectedOption === 'A' ? 'scale-95 opacity-40' : 
-                'hover:scale-102 hover:ring-2 hover:ring-white/20'
-              }`}
+              className={`group relative flex-1 max-w-md aspect-[4/3] rounded-2xl overflow-hidden transition-all duration-300 bg-neutral-800 ${selectedOption === 'B' ? 'scale-105 ring-4 ring-purple-500' :
+                selectedOption === 'A' ? 'scale-95 opacity-40' :
+                  'hover:scale-102 hover:ring-2 hover:ring-white/20'
+                }`}
             >
               {question.optionB.image ? (
-                <img 
-                  src={question.optionB.image} 
+                <img
+                  src={question.optionB.image}
                   alt={question.optionB.label}
                   className="w-full h-full object-cover"
                 />
@@ -583,12 +589,12 @@ export default function BrandStyleQuiz() {
               <h2 className="text-lg font-medium mb-6 text-neutral-300">Your Style DNA</h2>
               <div className="flex flex-wrap gap-3 mb-8">
                 {topTraits.map((trait, i) => (
-                  <span 
+                  <span
                     key={trait}
                     className="px-4 py-2 rounded-full text-sm font-medium"
                     style={{
-                      background: i === 0 ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
-                                 i === 1 ? 'rgba(102, 126, 234, 0.3)' : 'rgba(255,255,255,0.1)',
+                      background: i === 0 ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' :
+                        i === 1 ? 'rgba(102, 126, 234, 0.3)' : 'rgba(255,255,255,0.1)',
                       color: i < 2 ? 'white' : '#999'
                     }}
                   >
@@ -603,7 +609,7 @@ export default function BrandStyleQuiz() {
                   const rightScore = scores[dim.opposite] || 0;
                   const total = leftScore + rightScore || 1;
                   const leftPercent = (leftScore / total) * 100;
-                  
+
                   return (
                     <div key={key} className="space-y-1">
                       <div className="flex justify-between text-xs text-neutral-500">
@@ -611,7 +617,7 @@ export default function BrandStyleQuiz() {
                         <span className={leftPercent < 50 ? 'text-white' : ''}>{dim.opposite}</span>
                       </div>
                       <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
                             width: `${leftPercent}%`,
@@ -630,14 +636,14 @@ export default function BrandStyleQuiz() {
                 <h2 className="text-lg font-medium mb-4 text-neutral-300">Recommended Templates</h2>
                 <div className="space-y-4 mb-8">
                   {rankedTemplates.map((template, i) => (
-                    <div 
+                    <div
                       key={template.name}
                       className={`bg-neutral-900 rounded-2xl overflow-hidden flex flex-col sm:flex-row ${i === 0 ? 'ring-2 ring-purple-500' : ''}`}
                     >
                       <div className="w-full sm:w-48 h-40 sm:h-32 flex-shrink-0 bg-neutral-800">
                         {template.previewImage ? (
-                          <img 
-                            src={template.previewImage} 
+                          <img
+                            src={template.previewImage}
                             alt={template.name}
                             className="w-full h-full object-cover"
                           />
