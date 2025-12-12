@@ -304,7 +304,6 @@ export default function BrandStyleQuiz() {
     setSubmitting(true);
 
     const topTraits = getTopTraits();
-    const rankedTemplates = matchTemplates();
     const f = FIELD_NAMES.results;
 
     const resultData = {
@@ -313,7 +312,6 @@ export default function BrandStyleQuiz() {
       [f.scores]: JSON.stringify(scores),
       [f.answers]: JSON.stringify(answers),
       [f.topTraits]: topTraits.join(', '),
-      [f.recommendedTemplate]: rankedTemplates[0]?.name || '',
       [f.respondentName]: contactInfo.name,
       [f.respondentEmail]: contactInfo.email
     };
@@ -321,10 +319,15 @@ export default function BrandStyleQuiz() {
     if (client?.id) {
       try {
         resultData[f.client] = [client.id];
-        await airtable.create('Results', resultData);
+        console.log('Saving results to Airtable:', resultData);
+        const response = await airtable.create('Results', resultData);
+        console.log('Results saved successfully:', response);
       } catch (err) {
         console.error('Error saving results:', err);
+        // Don't block the user from seeing results even if save fails
       }
+    } else {
+      console.warn('No client ID available, results not saved to Airtable');
     }
 
     setSubmitting(false);
@@ -573,7 +576,6 @@ export default function BrandStyleQuiz() {
   // Results screen
   if (screen === 'results') {
     const topTraits = getTopTraits();
-    const rankedTemplates = matchTemplates();
 
     return (
       <>
@@ -632,46 +634,6 @@ export default function BrandStyleQuiz() {
                 })}
               </div>
             </div>
-
-            {rankedTemplates.length > 0 && (
-              <>
-                <h2 className="text-lg font-medium mb-4 text-neutral-300">Recommended Templates</h2>
-                <div className="space-y-4 mb-8">
-                  {rankedTemplates.map((template, i) => (
-                    <div
-                      key={template.name}
-                      className={`bg-neutral-900 rounded-2xl overflow-hidden flex flex-col sm:flex-row ${i === 0 ? 'ring-2 ring-purple-500' : ''}`}
-                    >
-                      <div className="w-full sm:w-48 h-40 sm:h-32 flex-shrink-0 bg-neutral-800">
-                        {template.previewImage ? (
-                          <img
-                            src={template.previewImage}
-                            alt={template.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-neutral-600">
-                            No preview
-                          </div>
-                        )}
-                      </div>
-                      <div className="p-5 flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-medium">{template.name}</h3>
-                          <span className={`text-sm px-2 py-1 rounded ${i === 0 ? 'bg-purple-500/20 text-purple-300' : 'bg-neutral-800 text-neutral-400'}`}>
-                            {template.matchPercent}% match
-                          </span>
-                        </div>
-                        <p className="text-sm text-neutral-400 mb-3">{template.description}</p>
-                        {i === 0 && (
-                          <span className="text-xs text-purple-400">★ Best Match</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
 
             <details className="bg-neutral-900 rounded-2xl p-6 mb-8">
               <summary className="cursor-pointer text-neutral-400 hover:text-white transition-colors">
