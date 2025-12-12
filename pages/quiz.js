@@ -438,34 +438,35 @@ export default function BrandStyleQuiz() {
           </div>
 
           <div className="text-center pt-8 pb-4 px-6">
-            <p className="text-neutral-500 text-sm mb-1">
+            <p className="text-neutral-500 text-sm mb-2">
               {currentQuestion + 1} of {questions.length}
             </p>
-            <h2 className="text-xl font-light">{question.category}</h2>
+            <h2 className="text-3xl md:text-4xl font-medium">{question.category}</h2>
           </div>
 
-          <div className="flex-1 flex items-center justify-center p-6 gap-4 md:gap-8">
+          <div className="flex-1 flex flex-col md:flex-row items-center justify-center p-6 gap-6 md:gap-8">
             <button
               onClick={() => handleChoice('A')}
               disabled={isAnimating}
-              className={`group relative flex-1 max-w-md aspect-[4/3] rounded-2xl overflow-hidden transition-all duration-300 bg-neutral-800 ${selectedOption === 'A' ? 'scale-105 ring-4 ring-purple-500' :
+              className={`group flex flex-col w-full max-w-md transition-all duration-300 ${selectedOption === 'A' ? 'scale-105' :
                 selectedOption === 'B' ? 'scale-95 opacity-40' :
-                  'hover:scale-102 hover:ring-2 hover:ring-white/20'
+                  'hover:scale-102'
                 }`}
             >
-              {question.optionA.image ? (
-                <img
-                  src={question.optionA.image}
-                  alt={question.optionA.label}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-neutral-600">
-                  No image
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
+              <div className={`relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-neutral-800 ${selectedOption === 'A' ? 'ring-4 ring-purple-500' : 'hover:ring-2 hover:ring-white/20'}`}>
+                {question.optionA.image ? (
+                  <img
+                    src={question.optionA.image}
+                    alt={question.optionA.label}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-neutral-600">
+                    No image
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 text-center">
                 <span className="text-lg md:text-xl font-medium">{question.optionA.label}</span>
               </div>
             </button>
@@ -477,24 +478,25 @@ export default function BrandStyleQuiz() {
             <button
               onClick={() => handleChoice('B')}
               disabled={isAnimating}
-              className={`group relative flex-1 max-w-md aspect-[4/3] rounded-2xl overflow-hidden transition-all duration-300 bg-neutral-800 ${selectedOption === 'B' ? 'scale-105 ring-4 ring-purple-500' :
+              className={`group flex flex-col w-full max-w-md transition-all duration-300 ${selectedOption === 'B' ? 'scale-105' :
                 selectedOption === 'A' ? 'scale-95 opacity-40' :
-                  'hover:scale-102 hover:ring-2 hover:ring-white/20'
+                  'hover:scale-102'
                 }`}
             >
-              {question.optionB.image ? (
-                <img
-                  src={question.optionB.image}
-                  alt={question.optionB.label}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-neutral-600">
-                  No image
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
+              <div className={`relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-neutral-800 ${selectedOption === 'B' ? 'ring-4 ring-purple-500' : 'hover:ring-2 hover:ring-white/20'}`}>
+                {question.optionB.image ? (
+                  <img
+                    src={question.optionB.image}
+                    alt={question.optionB.label}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-neutral-600">
+                    No image
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 text-center">
                 <span className="text-lg md:text-xl font-medium">{question.optionB.label}</span>
               </div>
             </button>
